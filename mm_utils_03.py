@@ -30,48 +30,47 @@ def image_from_url(url):
     return PImage.open(image_data)
 
 try:
-  from ultralytics import YOLO
   from ultralytics.data.dataset import ClassificationDataset
   from ultralytics.models.yolo.classify import ClassificationTrainer, ClassificationValidator
 
 except:
   print("no YOLO found")
 
-else:
-  class CustomizedDataset(ClassificationDataset):
-    def __init__(self, root: str, args, augment: bool = False, prefix: str = ""):
-      super().__init__(root, args, augment, prefix)
 
-      # custom training transforms here
-      train_transforms = T.Compose(
-        [
-          T.Resize((args.imgsz, args.imgsz)),
-          T.RandomHorizontalFlip(p=args.fliplr),
-          T.RandomVerticalFlip(p=args.flipud),
-          T.RandAugment(interpolation=T.InterpolationMode.BILINEAR),
-          T.ColorJitter(brightness=args.hsv_v, contrast=args.hsv_v, saturation=args.hsv_s, hue=args.hsv_h),
-          T.ToTensor(),
-          T.Normalize(mean=tensor(0), std=tensor(1)),
-          T.RandomErasing(p=args.erasing, inplace=True),
-        ]
-      )
+class CustomizedDataset(ClassificationDataset):
+  def __init__(self, root: str, args, augment: bool = False, prefix: str = ""):
+    super().__init__(root, args, augment, prefix)
 
-      # custom validation transforms here
-      val_transforms = T.Compose(
-        [
-          T.Resize((args.imgsz, args.imgsz)),
-          T.ToTensor(),
-          T.Normalize(mean=tensor(0), std=tensor(1)),
-        ]
-      )
-      self.torch_transforms = train_transforms if augment else val_transforms
+    # custom training transforms here
+    train_transforms = T.Compose(
+      [
+        T.Resize((args.imgsz, args.imgsz)),
+        T.RandomHorizontalFlip(p=args.fliplr),
+        T.RandomVerticalFlip(p=args.flipud),
+        T.RandAugment(interpolation=T.InterpolationMode.BILINEAR),
+        T.ColorJitter(brightness=args.hsv_v, contrast=args.hsv_v, saturation=args.hsv_s, hue=args.hsv_h),
+        T.ToTensor(),
+        T.Normalize(mean=tensor(0), std=tensor(1)),
+        T.RandomErasing(p=args.erasing, inplace=True),
+      ]
+    )
 
-
-  class CustomizedTrainer(ClassificationTrainer):
-    def build_dataset(self, img_path: str, mode: str = "train", batch=None):
-      return CustomizedDataset(root=img_path, args=self.args, augment=mode == "train", prefix=mode)
+    # custom validation transforms here
+    val_transforms = T.Compose(
+      [
+        T.Resize((args.imgsz, args.imgsz)),
+        T.ToTensor(),
+        T.Normalize(mean=tensor(0), std=tensor(1)),
+      ]
+    )
+    self.torch_transforms = train_transforms if augment else val_transforms
 
 
-  class CustomizedValidator(ClassificationValidator):
-    def build_dataset(self, img_path: str, mode: str = "train"):
-      return CustomizedDataset(root=img_path, args=self.args, augment=mode == "train", prefix=self.args.split)
+class CustomizedTrainer(ClassificationTrainer):
+  def build_dataset(self, img_path: str, mode: str = "train", batch=None):
+    return CustomizedDataset(root=img_path, args=self.args, augment=mode == "train", prefix=mode)
+
+
+class CustomizedValidator(ClassificationValidator):
+  def build_dataset(self, img_path: str, mode: str = "train"):
+    return CustomizedDataset(root=img_path, args=self.args, augment=mode == "train", prefix=self.args.split)
